@@ -1,0 +1,65 @@
+%%Identification
+%%The package identifies itself and the LaTeX version needed
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{quoteography}[2023/07/12 quoteography]
+
+%%Required packages and preliminary definitions, needed by the options
+\usepackage{hyperref}
+\usepackage{forloop}
+\usepackage{textcomp,xspace}
+
+% The main counter, for numbering references to quotes (similar to a numbered bibliography). 
+\newcounter{quoteNumberingCounter}
+
+% The label used to link the instances of references to a quote, to its definition with the full quote in the `quoteography`. 
+\newcommand\buildQuoteReferenceLabel[1]{quoteRef:#1}
+
+% Internal key-value maps
+\newcommand\quoteIdentifierToNumberStorage{quoteIdentifierToNumberStorageKey}%quote identifier -> number
+\newcommand\getQuoteNumberFromIdentifier[1]{\csname \quoteIdentifierToNumberStorage:#1\endcsname}
+\newcommand\setQuoteNumberForIdentifier[2]{%
+  \expandafter\edef\csname \quoteIdentifierToNumberStorage:#1\endcsname{%
+    #2%
+  }%
+}
+
+\newcommand\quoteNumberToContentStorage{quoteNumberedStorageKey}%quote number -> content
+\newcommand\getQuoteFromNumber[1]{\csname \quoteNumberToContentStorage:#1\endcsname}
+\newcommand\setQuoteForNumber[2]{%
+  \expandafter\edef\csname \quoteNumberToContentStorage:#1\endcsname{%
+    #2%
+  }%
+}
+
+\makeatletter
+
+% Define a quote (#2) associated to an identifier (#1). 
+\newcommand{\defineQuote}[2]{%at this point, quote reference numbers are known for each identifier
+  \setQuoteForNumber{% 
+    \getQuoteNumberFromIdentifier{#1}}%get the quote reference number from the identifier
+    {{\unexpanded{#2}}}%to map it to the actual quote content
+}
+
+% Reference a quote, emitting the reference number at the callsite. 
+\newcommand{\refQuote}[1]{%
+  \ifcsname \quoteIdentifierToNumberStorage:#1\endcsname\else%deduplicates multiple references to the same quote
+    \stepcounter{quoteNumberingCounter}%
+    \setQuoteNumberForIdentifier{#1}{\number\value{quoteNumberingCounter}}
+  \fi%
+  \hyperref[\buildQuoteReferenceLabel{\getQuoteNumberFromIdentifier{#1}}]{%reference to the quoteography
+    {\textlangle \ref*{\buildQuoteReferenceLabel{\getQuoteNumberFromIdentifier{#1}}}\textrangle\xspace}%
+  }%
+}
+\makeatother
+
+\newcommand{\quoteography}[1]{%
+\input{#1}%read file
+\newcounter{quoteographyCounter}
+
+\whiledo{\value{quoteographyCounter}<\value{quoteNumberingCounter}}{%
+    \refstepcounter{quoteographyCounter}%
+    \phantomsection%
+    \label{\buildQuoteReferenceLabel{\number\value{quoteographyCounter}}}\number\value{quoteographyCounter}: %
+    {\getQuoteFromNumber{\number\value{quoteographyCounter}}}\\
+}%
+}
