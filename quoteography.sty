@@ -8,8 +8,17 @@
 \usepackage{forloop}
 \usepackage{textcomp,xspace}
 
+% Edit this command to change the appearance of the quote reference
+% (e.g., replace with standard brackets, change font, change ref numerals...).
+% The single argument is the label to reference.
+\newcommand{\quotereference}[1]{{\textlangle \ref*{#1}\textrangle\xspace}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%INTERNALS%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % The main counter, for numbering references to quotes (similar to a numbered bibliography). 
 \newcounter{quoteNumberingCounter}
+%this counter is incremented when a quote is referenced for the *first* time. 
+%subsequent citations only emit a linked reference, without touching the counter. 
 
 % The label used to link the instances of references to a quote, to its definition with the full quote in the `quoteography`. 
 \newcommand\buildQuoteReferenceLabel[1]{quoteRef:#1}
@@ -34,32 +43,33 @@
 \makeatletter
 
 % Define a quote (#2) associated to an identifier (#1). 
-\newcommand{\defineQuote}[2]{%at this point, quote reference numbers are known for each identifier
+\newcommand{\quoteitem}[2]{%at this point, quote reference numbers are known for each identifier
   \setQuoteForNumber{% 
     \getQuoteNumberFromIdentifier{#1}}%get the quote reference number from the identifier
     {{\unexpanded{#2}}}%to map it to the actual quote content
 }
 
-% Reference a quote, emitting the reference number at the callsite. 
-\newcommand{\refQuote}[1]{%
+% Reference a quote, emitting the linked, numbered reference at the callsite. 
+\newcommand{\refquote}[1]{%
   \ifcsname \quoteIdentifierToNumberStorage:#1\endcsname\else%deduplicates multiple references to the same quote
     \stepcounter{quoteNumberingCounter}%
     \setQuoteNumberForIdentifier{#1}{\number\value{quoteNumberingCounter}}
   \fi%
   \hyperref[\buildQuoteReferenceLabel{\getQuoteNumberFromIdentifier{#1}}]{%reference to the quoteography
-    {\textlangle \ref*{\buildQuoteReferenceLabel{\getQuoteNumberFromIdentifier{#1}}}\textrangle\xspace}%
+    \quotereference{\buildQuoteReferenceLabel{\getQuoteNumberFromIdentifier{#1}}}%
   }%
 }
 \makeatother
 
+% Generate the quote-ography (the numbered list of quotes, in the order of referencing in text).
 \newcommand{\quoteography}[1]{%
-\input{#1}%read file
+\input{#1}%read quote file
 \newcounter{quoteographyCounter}
 
-\whiledo{\value{quoteographyCounter}<\value{quoteNumberingCounter}}{%
+\whiledo{\value{quoteographyCounter}<\value{quoteNumberingCounter}}{%iterate the quote counter (remember: it is only incremented when a new quote is cited)
     \refstepcounter{quoteographyCounter}%
-    \phantomsection%
+    \phantomsection%anchor point for `hyperref` link
     \label{\buildQuoteReferenceLabel{\number\value{quoteographyCounter}}}\number\value{quoteographyCounter}: %
-    {\getQuoteFromNumber{\number\value{quoteographyCounter}}}\\
+    {\getQuoteFromNumber{\number\value{quoteographyCounter}}}\\%quotes are stored by their number, thus in order of citation
 }%
 }
